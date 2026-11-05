@@ -1,0 +1,23 @@
+{
+ "pool": "0x000000000Ed1eabD231Be41d93b719056F7febFC",
+ "deployBlock": 25998736,
+ "indexedToBlock": 26347230,
+ "headBlock": 26347236,
+ "synced": true,
+ "total": 14195,
+ "next": 14195,
+ "counts": {
+  "leaves": 5695,
+  "nullifiers": 5850,
+  "wraps": 3449,
+  "crossOuts": 11,
+  "lockLeaves": 26,
+  "lockNullifiers": 22
+ },
+ "lockSet": {
+  "count": 26,
+  "root": "0xea1ffc4b408923cbf7aefc6afe6da050121e9f60c8ca55f4ca3ab2874f7ac3c8",
+  "verified": true,
+  "block": 26347230
+ }
+}
