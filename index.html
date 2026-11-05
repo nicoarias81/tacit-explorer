@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tacit Explorer — one page across both chains</title>
+<meta name="description" content="A read-only explorer for Tacit: Taproot envelopes on Bitcoin, confidential pools on Ethereum/Base, the bridge, and the privacy frontier. Real mainnet data, no wallet, no keys.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Tacit <span class="dim">Explorer</span></h1>
+  <p class="tagline">One system, two chains: <strong>Taproot envelopes on Bitcoin</strong> and <strong>confidential pools on Ethereum / Base</strong>, joined by a proof bridge.</p>
+  <p class="statusline" id="statusline">loading live data…</p>
+  <nav>
+    <a href="#btc">Bitcoin</a><a href="#bridge">Bridge</a><a href="#confidential">Ethereum pool</a><a href="#evm">EVM pools</a><a href="#amm">Assets &amp; AMM</a><a href="#privacy">Privacy frontier</a><a href="#lookup">Lookup</a><a href="#sources">Sources</a>
+  </nav>
+  <p class="disclaimer">Read-only. No wallet, no sign-in, no keys — this page never asks for a seed phrase and never moves funds. All numbers below are fetched live by your browser from public APIs; nothing is mocked. Not affiliated with Tacit.</p>
+</header>
+
+<main>
+  <section id="btc">
+    <h2>1 · Bitcoin — Taproot envelopes <span class="net">mainnet</span></h2>
+    <p>Tacit's Bitcoin lane lives in Taproot envelope transactions: etches that define assets, transfers, mints and burns of confidential assets, all readable on-chain. Amounts and who-owns-what are hidden inside the envelope commitments; the transactions, counts and fees are public.</p>
+    <div class="grid" id="btc-grid">
+      <div class="card"><div class="k">Bitcoin tip height</div><div class="v" id="btc-tip">…</div><div class="src">mempool.space · live</div></div>
+      <div class="card"><div class="k">Header relay tip (attested on Ethereum)</div><div class="v" id="relay-tip">…</div><div class="src">api.tacit.finance /reflection/status · live</div></div>
+      <div class="card"><div class="k">Relay lag</div><div class="v" id="relay-lag">…</div><div class="src">blocks behind Bitcoin tip</div></div>
+    </div>
+  </section>
+
+  <section id="bridge">
+    <h2>2 · The bridge — burns in, mints out</h2>
+    <p>Moving value across the privacy boundary burns notes on one side and mints on the other. What the chain shows is <em>that</em> a bridge happened and when — never how much.</p>
+    <div class="grid">
+      <div class="card"><div class="k">Bridge burns (all time)</div><div class="v" id="bridge-burns">…</div><div class="src">reflection/status · live</div></div>
+      <div class="card"><div class="k">Bridge mints (all time)</div><div class="v" id="bridge-minted">…</div><div class="src">reflection/status · live</div></div>
+      <div class="card"><div class="k">Burns / mints in flight</div><div class="v" id="bridge-flight">…</div><div class="src">burns − mints</div></div>
+      <div class="card"><div class="k">Burn deposits waiting</div><div class="v" id="burn-deposits">…</div><div class="src">reflection/status · live</div></div>
+      <div class="card"><div class="k">Burns awaiting bundle</div><div class="v" id="burns-awaiting">…</div><div class="src">reflection/status · live</div></div>
+      <div class="card"><div class="k">Folded cross-outs</div><div class="v" id="crossouts-folded">…</div><div class="src">reflection/status · live</div></div>
+    </div>
+    <p class="note" id="reflection-updated"></p>
+  </section>
+
+  <section id="confidential">
+    <h2>3 · Ethereum — the confidential pool <span class="net">mainnet</span></h2>
+    <p><code id="pool-addr">0x000000000Ed1eabD231Be41d93b719056F7febFC</code> (deploy block <span id="pool-deploy">25,998,736</span>). Deposits (<em>wraps</em>) put value in as commitments; spends publish nullifiers; notes move without public amounts. The indexer mirrors the on-chain Merkle tree entry by entry.</p>
+    <div class="grid">
+      <div class="card"><div class="k">Tree entries indexed</div><div class="v" id="idx-total">…</div><div class="src">confidential/index · live</div></div>
+      <div class="card"><div class="k">Leaves (notes created)</div><div class="v" id="idx-leaves">…</div><div class="src">index counts · live</div></div>
+      <div class="card"><div class="k">Nullifiers (spends)</div><div class="v" id="idx-nulls">…</div><div class="src">index counts · live</div></div>
+      <div class="card"><div class="k">Wraps (deposits)</div><div class="v" id="idx-wraps">…</div><div class="src">index counts · live</div></div>
+      <div class="card"><div class="k">Live notes</div><div class="v" id="live-notes">…</div><div class="src">reflection/status · live</div></div>
+      <div class="card"><div class="k">Indexer head / indexed</div><div class="v" id="idx-head">…</div><div class="src">blocks · live</div></div>
+    </div>
+    <div class="subcard">
+      <h3>All-time wrapped volume per asset <span class="snap-note">(summed live from every wrap entry in the indexer)</span></h3>
+      <table id="wrap-volume"><thead><tr><th>asset</th><th>asset id</th><th>wrapped (all-time)</th><th>wraps</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="subcard">
+      <h3>Latest pool events</h3>
+      <table id="recent"><thead><tr><th>seq</th><th>type</th><th>block</th><th>detail</th><th>tx</th></tr></thead><tbody></tbody></table>
+      <p class="note">Leaves = commitments added to the Merkle tree (new notes or memo updates — the memo bytes are public, what they mean is not). Nullifiers = notes spent. Wraps = public deposits (amount and asset are public by design). Cross-outs = a note cancelled against a deposit. These txs carry zero public amounts for leaves/nullifiers: the point of the design.</p>
+    </div>
+    <div class="subcard">
+      <h3>Relay fee floors (quote API)</h3>
+      <div id="quotes" class="quote-grid"></div>
+    </div>
+  </section>
+
+  <section id="evm">
+    <h2>4 · EVM pools — Ethereum, Base, Robinhood, MegaETH</h2>
+    <p>The Groth16 EVM pool ("Secret Sats", asset = ETH) runs the same circuit on every chain: <code>transact</code>, 2 public inputs, 2 public outputs. Reads below are live <code>eth_call</code>s through public RPCs.</p>
+    <div class="grid">
+      <div class="card"><div class="k">Base block</div><div class="v" id="base-block">…</div><div class="src">mainnet.base.org · live</div></div>
+      <div class="card"><div class="k">Base pool tree index</div><div class="v" id="base-head">…</div><div class="src">nextIndex() on TacitEvmPool · live</div></div>
+      <div class="card"><div class="k">Base pool root</div><div class="v mono small" id="base-root">…</div><div class="src">root() · live</div></div>
+      <div class="card"><div class="k">Base pool ETH custody</div><div class="v" id="base-bal">…</div><div class="src">eth_getBalance · live</div></div>
+      <div class="card"><div class="k">Ethereum block</div><div class="v" id="eth-block">…</div><div class="src">publicnode · live</div></div>
+      <div class="card"><div class="k">ConfidentialPool ETH custody</div><div class="v" id="eth-bal">…</div><div class="src">eth_getBalance · live</div></div>
+    </div>
+    <div class="subcard">
+      <h3>Per-chain deployments <span class="snap-note">(contracts/deployments/evm-pool.json)</span></h3>
+      <table id="chains">
+        <thead><tr><th>chain</th><th>pool</th><th>deploy block</th><th>keeper</th></tr></thead>
+        <tbody>
+          <tr><td>Ethereum (1)</td><td class="mono">0x000000c2A20657CE25f2Ba99737933D031AFBEE9</td><td>26,069,245</td><td><a href="https://tacit-evm-pool-keeper.onrender.com/evm-pool/keeper/quote">keeper</a></td></tr>
+          <tr><td>Base (8453)</td><td class="mono">0x000000c2A20657CE25f2Ba99737933D031AFBEE9</td><td>51,864,014</td><td><a href="https://tacit-evm-pool-keeper-base.onrender.com/evm-pool/keeper/quote">keeper</a></td></tr>
+          <tr><td>Robinhood Chain (4663)</td><td class="mono">0x000000c2A20657CE25f2Ba99737933D031AFBEE9</td><td>73,991,661</td><td><a href="https://tacit-evm-pool-keeper-robinhood.onrender.com/evm-pool/keeper/quote">keeper</a></td></tr>
+          <tr><td>MegaETH (4326)</td><td class="mono">0x000000c2A20657CE25f2Ba99737933D031AFBEE9</td><td>28,397,750</td><td><a href="https://tacit-evm-pool-keeper-megaeth.onrender.com/evm-pool/keeper/quote">keeper</a></td></tr>
+        </tbody>
+      </table>
+      <p class="note" id="keeper-quote"></p>
+    </div>
+  </section>
+
+  <section id="amm">
+    <h2>5 · Bitcoin-side assets &amp; AMM <span class="badge">snapshot</span></h2>
+    <p>Etched confidential assets on Tacit's Bitcoin mainnet and the private AMM pools over them. <strong>This block is a build-time snapshot</strong> (see the timestamp below): the indexer's <code>/assets</code> and <code>/amm/pools</code> routes send CORS only to <code>tacit.finance</code>, so this page cannot call them from your browser. The snapshot files carry the raw API responses, and the live confidential-pool numbers above are fetched live instead.</p>
+    <p class="note" id="snapshot-date"></p>
+    <div class="subcard">
+      <h3>AMM pool <span class="snap-note">(<code>/amm/pools?network=mainnet</code>)</span></h3>
+      <table id="pools-table"><thead><tr><th>pool</th><th>asset A</th><th>asset B</th><th>reserve A</th><th>reserve B</th><th>LP shares</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="subcard">
+      <h3>Etched assets (<span id="asset-count">…</span> total)</h3>
+      <table id="assets-table"><thead><tr><th>ticker</th><th>decimals</th><th>etched at</th><th>mintable</th><th>asset id</th><th>etch tx</th></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <h2>6 · The privacy frontier — what is public, what stays hidden</h2>
+    <p>Tacit's privacy has a precise boundary. This page shows you the public side and refuses to fake the hidden side.</p>
+    <div class="two-col">
+      <div class="card public">
+        <h3>Public (on-chain, anyone can see)</h3>
+        <ul>
+          <li>That transactions exist, and <strong>when</strong> (timing, block heights, timestamps)</li>
+          <li><strong>Counts</strong>: how many leaves, nullifiers, wraps, cross-outs, bridge burns/mints</li>
+          <li><strong>Fees and tips</strong> paid to relayers and provers</li>
+          <li><strong>Addresses</strong> that deposit (wrap) or receive withdrawals</li>
+          <li>Wrap <strong>amounts and assets</strong> (deposit sizes are public by design)</li>
+          <li>Memo bytes on leaves (encrypted payload — contents hidden, existence public)</li>
+          <li>The Merkle tree root and size</li>
+        </ul>
+      </div>
+      <div class="card hidden-side">
+        <h3>Hidden (only the note holder knows)</h3>
+        <ul>
+          <li>Note <strong>amounts</strong> inside leaves and spends — no public value for leaves or nullifiers</li>
+          <li><strong>Who owns</strong> a leaf: commitments are opaque 32-byte values</li>
+          <li>The <strong>link between notes</strong>: a nullifier proves the right to spend, without saying which leaf</li>
+          <li>Where a withdrawn value <em>came from</em> or a deposit goes <em>after</em> shielding</li>
+          <li>The memos' decrypted meaning (only the view key can decrypt)</li>
+          <li>This is why a public explorer can show counts and totals but never a balance per person</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="lookup">
+    <h2>7 · Lookup — tacit1 ID / txid / address / XNS name</h2>
+    <p>Enter any of: a <code>tacit1…</code> unified address (decoded <strong>locally in your browser</strong> — the address never leaves this page), a Bitcoin txid or address, an Ethereum/Base tx or 0x address, or an XNS name like <code>vitalik@eth</code> (resolved live on-chain via <code>getAddress()</code>).</p>
+    <div class="lookup-bar">
+      <input id="lookup-input" type="text" placeholder="tacit1… / bc1… / txid / 0x… / alice@xns" spellcheck="false" autocomplete="off">
+      <button id="lookup-btn">Look up</button>
+    </div>
+    <div id="lookup-out" class="lookup-out"></div>
+  </section>
+
+  <section id="sources">
+    <h2>8 · Sources, CORS status &amp; honesty notes</h2>
+    <div class="subcard">
+      <table id="sources-table">
+        <thead><tr><th>source</th><th>used for</th><th>CORS for this page</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://api.tacit.finance/reflection/status">api.tacit.finance /reflection/status</a></td><td>header relay height, bridge burns/mints, live notes</td><td class="ok">allows *</td></tr>
+          <tr><td><a href="https://api.tacit.finance/confidential/index?from=0">api.tacit.finance /confidential/index</a></td><td>full event index of the Ethereum ConfidentialPool (14k+ entries, wrapped volume)</td><td class="ok">allows *</td></tr>
+          <tr><td>api.tacit.finance /confidential/quote</td><td>fee floors and tips per asset</td><td class="ok">allows *</td></tr>
+          <tr><td>api.tacit.finance /assets, /amm/pools</td><td>Bitcoin-side etched assets, AMM reserves</td><td class="warn">build-time snapshot (CORS allowlists tacit.finance only)</td></tr>
+          <tr><td><a href="https://mempool.space/api/blocks/tip/height">mempool.space</a></td><td>Bitcoin tip height, tx/address lookup</td><td class="ok">allows *</td></tr>
+          <tr><td><a href="https://mainnet.base.org">mainnet.base.org</a></td><td>Base RPC: pool tree root/size, custody balance</td><td class="ok">origin echoed</td></tr>
+          <tr><td><a href="https://ethereum-rpc.publicnode.com">ethereum-rpc.publicnode.com</a></td><td>Ethereum RPC: pool balance, XNS resolution</td><td class="ok">allows *</td></tr>
+          <tr><td><a href="https://tacit-evm-pool-keeper-base.onrender.com/evm-pool/keeper/quote">Base pool keeper</a></td><td>relayer fee quote for the Base EVM pool</td><td class="ok">allows *</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note" id="xns-sample"></p>
+    <ul class="honesty">
+      <li>Every live number above is fetched by your browser on page load; <span class="src-inline">live</span> marks the source. Reload to refresh.</li>
+      <li>The assets/AMM table is a timestamped snapshot of the same indexer's mainnet data, saved at build time because of the route's CORS policy. Raw responses ship in <code>data/</code>.</li>
+      <li>"All-time wrapped volume" is summed from the indexer's wrap entries — it is historical flow, not the pool's current balance (deposits get spent and withdrawn; the contracts' ETH custody is shown separately).</li>
+      <li>Nullifier count can exceed leaf count because wraps and cross-outs consume nullifiers too.</li>
+      <li>This page is read-only and has no backend: it cannot ask for keys, cannot sign, cannot move anything. Lookups of <code>tacit1…</code> addresses are decoded in your browser and sent nowhere.</li>
+    </ul>
+    <p class="footer">Data: Tacit public indexer · mempool.space · public RPCs. Code: <a href="https://github.com/nicoarias81/tacit-explorer">github.com/nicoarias81/tacit-explorer</a>. Read-only, not affiliated with Tacit.</p>
+  </section>
+</main>
+<script>window.__SNAPSHOT_DATE = "2026-11-05";</script>
+<script src="app.js"></script>
+</body>
+</html>
