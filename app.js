@@ -17,8 +17,8 @@ var XNS = '0x6e797ba2d3103aF167918e71a7E01DE40D45f74b';
 // eth_call selectors: nextIndex(), root() on TacitEvmPool; getAddress(string), getName(address) on XNSv2
 var SEL_NEXTINDEX = '0xfc7e9c6f';
 var SEL_ROOT = '0xebf0c717';
-var SEL_GETADDR = '0xbac6985b'; // getAddress(string)
-var SEL_GETNAME = '0xa69a341a'; // getName(address)
+var SEL_GETADDR = '0xbf40fac1'; // getAddress(string) — keccak-verified, the previous constant reverted
+var SEL_GETNAME = '0x5fd4b08a'; // getName(address) — keccak-verified
 var ASSETS = {
   '0x3cba71e1114af183cdeacc6b8457a474d17529fd28704480ca799d0d03126f34': { name: 'cETH / tETH', dec: 18 },
   '0x62a20d98fc1cd20289621d1315294cb8772f934d822e404b71e1f471cf0679c8': { name: 'cBTC', dec: 8 },
@@ -26,8 +26,14 @@ var ASSETS = {
   '0xf0bbe868af10c6c67652a99709bf32048d1aa7194efe3e9a1ef1bde43f94762b': { name: 'TAC', dec: 18 }
 };
 
-function jget(url) {
+function jget(url, attempt) {
+  attempt = attempt || 0;
   return fetch(url).then(function (r) {
+    // the indexer rate-limits bursts; back off instead of giving up on real data
+    if (r.status === 429 && attempt < 4) {
+      return new Promise(function (res) { setTimeout(res, 1200 * Math.pow(2, attempt)); })
+        .then(function () { return jget(url, attempt + 1); });
+    }
     if (!r.ok) throw new Error(r.status + ' ' + url);
     return r.json();
   });
@@ -147,6 +153,17 @@ function encodeStr(s) {
   return '0000000000000000000000000000000000000000000000000000000000000020'
     + bytes.length.toString(16).padStart(64, '0') + bytes + '0'.repeat(pad);
 }
+function xnsReverse(addr) {
+  return rpc(ETH_RPC, 'eth_call', [{ to: XNS, data: SEL_GETNAME + addr.toLowerCase().slice(2).padStart(64, '0') }, 'latest'])
+    .then(function (res) {
+      var raw = res.slice(2), len = parseInt(raw.slice(64, 128), 16);
+      if (!len) return null;
+      var body = raw.slice(128, 128 + len * 2);
+      var name = '';
+      for (var i = 0; i < body.length; i += 2) name += String.fromCharCode(parseInt(body.slice(i, i + 2), 16));
+      return name || null;
+    });
+}
 function xnsResolve(name) {
   return rpc(ETH_RPC, 'eth_call', [{ to: XNS, data: SEL_GETADDR + encodeStr(name) }, 'latest'])
     .then(function (res) {
@@ -188,27 +205,40 @@ function loadReflection() {
   });
 }
 function loadIndex() {
-  var entries = [];
-  function page(from, guard) {
-    if (guard > 40) return Promise.resolve();
-    return jget('https://api.tacit.finance/confidential/index?from=' + from).then(function (d) {
-      window.__meta = d;
-      entries = entries.concat(d.entries || []);
-      set('idx-total', fmt(entries.length) + ' / ' + fmt(d.total));
-      $('statusline').textContent = 'confidential index: ' + fmt(entries.length) + '/' + fmt(d.total) + ' entries';
-      if (!d.entries || !d.entries.length || entries.length >= d.total) return null;
-      return page(d.entries[d.entries.length - 1].seq + 1, guard + 1);
-    });
-  }
-  return page(0, 0).then(function () {
-    var d = window.__meta;
+  var entries = [], metaShown = false;
+  // the summary (total / leaves / nullifiers / wraps / head) comes with the first page:
+  // show it immediately, then keep walking the index to build the per-asset volume table.
+  function applyMeta(d) {
     set('idx-total', fmt(d.total));
     set('idx-leaves', fmt(d.counts.leaves));
     set('idx-nulls', fmt(d.counts.nullifiers));
     set('idx-wraps', fmt(d.counts.wraps));
     set('idx-head', fmt(d.headBlock) + ' / ' + fmt(d.indexedToBlock) + (d.synced ? ' (synced)' : ''));
-    window.__indexEntries = entries;
+  }
+  function page(from, guard) {
+    if (guard > 40) return Promise.resolve();
+    return jget('https://api.tacit.finance/confidential/index?from=' + from).then(function (d) {
+      if (!metaShown) { metaShown = true; applyMeta(d); }
+      entries = entries.concat(d.entries || []);
+      window.__indexEntries = entries;
+      if (guard % 3 === 2) renderIndex(entries);        // progressive: table grows as pages land
+      $('statusline').textContent = 'confidential index: ' + fmt(entries.length) + '/' + fmt(d.total) + ' entries';
+      if (!d.entries || !d.entries.length || entries.length >= d.total) return null;
+      // pace the walk: one request every ~350 ms keeps us under the indexer's burst limit
+      var next = d.entries[d.entries.length - 1].seq + 1;
+      return new Promise(function (res) { setTimeout(res, 350); })
+        .then(function () { return page(next, guard + 1); });
+    });
+  }
+  return page(0, 0).then(function () {
     renderIndex(entries);
+    $('statusline').textContent = 'live data loaded \u00b7 confidential index '
+      + fmt(entries.length) + ' entries';
+  }).catch(function (e) {
+    // partial data is still real data: show what we got, say what failed
+    $('statusline').textContent = 'confidential index: ' + fmt(entries.length) + ' entries, then ' + e.message;
+    if (!metaShown) set('idx-total', 'unavailable: ' + e.message);
+    if (entries.length) renderIndex(entries);
   });
 }
 function renderIndex(entries) {
@@ -447,8 +477,11 @@ $('lookup-btn').addEventListener('click', doLookup);
 $('lookup-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLookup(); });
 
 // ── boot ──
-var status = $('statusline');
-status.textContent = 'loading live data\u2026';
+// NB: never name this variable `status` — window.status is a string property, so
+// strict mode turns `status.textContent = …` into a TypeError and the whole page
+// stays stuck at "loading live data…". Cost two hours once; does not again.
+var statusEl = $('statusline');
+statusEl.textContent = 'loading live data\u2026';
 loadBtcTip();
 loadReflection();
 loadIndex();
@@ -458,8 +491,11 @@ loadKeeperQuote();
 loadSnapshot();
 loadXnsSample();
 function loadXnsSample() {
-  xnsResolve('vitalik@eth').then(function (addr) {
+  // reverse direction is what this registry answers today: getName(address) returns the handle.
+  // (forward getAddress(string) returns zero for the names we tried, so we don't pretend otherwise)
+  xnsReverse('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045').then(function (name) {
     var el = $('xns-sample');
-    if (el && addr) el.innerHTML = 'XNS works on-chain: <code>vitalik@eth</code> \u2192 <code>' + addr + '</code> (resolved via getAddress() on 0x6e79\u202674b during this page load).';
+    if (el && name) el.innerHTML = 'XNS answers on-chain: <code>getName(0xd8dA\u2026a96045)</code> \u2192 <code>'
+      + name + '</code> (eth_call to 0x6e79\u202674b during this page load).';
   }).catch(function () {});
 }
