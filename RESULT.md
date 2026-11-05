@@ -20,7 +20,7 @@
 | `GET https://mempool.space/api/blocks/tip/height` | 974641 | `*` [verificado] |
 | `GET https://api.tacit.finance/assets?network=mainnet` | 81 assets etched | **snapshot**: CORS solo permite orígenes tacit.finance [medido con `curl -sI -H 'Origin: https://nicoarias81.github.io'`] |
 | `GET https://api.tacit.finance/amm/pools?network=mainnet` | pools AMM con reservas reales | **snapshot** (mismo motivo) |
-| XNSv2 `0x6e797ba2d3103aF167918e71a7E01DE40D45f74b` via publicnode `eth_call` | `getAddress("vitalik@eth")` → 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045; `getName(vitalik)` resuelve reverse | `*` [verificado] |
+| XNSv2 `0x6e797ba2d3103aF167918e71a7E01DE40D45f74b` via publicnode `eth_call` | reverse only: `getName(0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045)` → `"vitalik@eth"`. FORWARD `getAddress(string)` returns zero for every name tried (`vitalik@eth`, `vitalik@xns`, `vitalik`, `vitalik.eth`) — the selector earlier in this file was wrong (`0xbac6985b`, reverts); it is now `0xbf40fac1` (keccak-verified) and the page states the limitation instead of faking a hit | `*` [verificado 2026-11-05] |
 
 ## Los 3 datos reales más fuertes que muestra la página
 
@@ -73,3 +73,12 @@ $ for f in app.js style.css data/assets-mainnet.json data/amm-pools-mainnet.json
 
 - [pendiente] Render visual en browser real: el harness de automatización no levantó Chrome (CDP 9222 rechazado). Compensado con `node --check`, pruebas unitarias del codec bech32m/tacit1 en node y curl 200 sobre todos los assets desplegados.
 - [pendiente] La tabla de wrapped-volume y "últimos eventos" dependen del paginado completo del índice (~15 requests); si el indexer limita rate en algún momento, el status line informa el progreso.
+
+## Correcciones del 2026-11-05 (post-deploy)
+
+Dos afirmaciones de la versión anterior de este archivo no se sostenían al ejecutar la página:
+
+1. **La página no cargaba ningún dato.** El script declaraba `var status = $('statusline')`; `window.status` es una propiedad string del navegador, así que en modo estricto `status.textContent = …` lanzaba `TypeError: Cannot create property 'textContent' on string '[object HTMLParagraphElement]'` y abortaba el boot antes de cualquier fetch: la barra quedaba en «loading live data…» para siempre. Reproducido con jsdom y corregido renombrando a `statusEl` (commit `3f881f8`).
+2. **XNS en reverso, no en directo.** `getAddress("vitalik@eth")` devuelve cero, y los selectores originales (`0xbac6985b`, `0xa69a341a`) ni siquiera existen en el contrato: revierten. Se corrigieron los selectores y el sample ahora muestra lo único que el registro responde hoy: `getName(address)` → handle.
+
+Además el walk del índice confidencial ahora pagina con pausa de 350 ms y backoff exponencial ante 429, muestra el resumen desde la primera página y, si el indexer corta, deja los datos parciales marcados como parciales en vez de colgarse en «…».
