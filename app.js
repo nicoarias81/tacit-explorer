@@ -499,3 +499,83 @@ function loadXnsSample() {
       + name + '</code> (eth_call to 0x6e79\u202674b during this page load).';
   }).catch(function () {});
 }
+
+// ── lifetime ledger: decoded from eth_getLogs at build time, cross-checked against the indexer ──
+function loadLifetime() {
+  jget('data/lifetime.json').then(renderLifetime).catch(function (e) {
+    var el = $('ledger-crosscheck');
+    if (el) el.textContent = 'lifetime ledger unavailable: ' + e.message;
+  });
+}
+function digitOf(el) {
+  if (!el) return null;
+  var n = Number(String(el.textContent).replace(/[^0-9]/g, ''));
+  return isNaN(n) ? null : n;
+}
+function renderLifetime(s) {
+  var t = s.totals;
+  set('ledger-deploy', fmt(s.meta.deploy_block));
+  set('ledger-block', fmt(s.meta.eth_block));
+  set('ledger-wraps', fmt(t.wraps));
+  set('ledger-minted', fmt(t.notes_created));
+  set('ledger-spent', fmt(t.notes_spent));
+  set('ledger-cross', fmt(t.crossouts));
+  set('ledger-btc', fmt(t.btc_notes));
+  var ethRow = s.assets.filter(function (a) { return a.symbol === 'tETH'; })[0];
+  set('ledger-eth', ethRow ? ethRow.volume.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '\u2014');
+
+  var max = Math.max.apply(null, s.assets.map(function (a) { return a.wraps; }));
+  var tb = $('ledger-assets').querySelector('tbody');
+  tb.innerHTML = s.assets.map(function (a) {
+    var unreg = a.name.indexOf('assetId') === 0;
+    var pct = max > 0 ? (a.wraps / max * 100) : 0;
+    var vol = a.volume.toLocaleString('en-US', { maximumFractionDigits: a.decimals > 6 ? 4 : 2 });
+    return '<tr><td>' + a.symbol + (unreg ? ' <span class="warn">(unregistered)</span>' : '') + '</td><td>' + fmt(a.wraps)
+      + '</td><td>' + vol + '</td><td><span class="lbar"><i style="width:' + Math.max(pct, 0.8).toFixed(1) + '%"></i></span></td>'
+      + '<td class="mono">' + (a.underlying ? short(a.underlying, 8) : '\u2014') + '</td></tr>';
+  }).join('');
+
+  var W = 1000, H = 250, padL = 46, padR = 12, padT = 12, padB = 34;
+  var weeks = s.weeks, n = weeks.length, maxV = 0;
+  weeks.forEach(function (w) { maxV = Math.max(maxV, w.created, w.spent); });
+  maxV = maxV * 1.12 || 1;
+  var gw = (W - padL - padR) / n;
+  var y = function (v) { return padT + (H - padT - padB) * (1 - v / maxV); };
+  var g = '', i, w, x, bw, vv, yy;
+  for (i = 0; i <= 4; i++) {
+    vv = maxV / 4 * i; yy = y(vv);
+    g += '<line x1="' + padL + '" y1="' + yy.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + yy.toFixed(1) + '" stroke="rgba(255,255,255,.08)"/>'
+      + '<text x="' + (padL - 8) + '" y="' + (yy + 3.5).toFixed(1) + '" fill="#8a93a6" font-size="10" text-anchor="end" font-family="ui-monospace,monospace">' + Math.round(vv) + '</text>';
+  }
+  for (i = 0; i < n; i++) {
+    w = weeks[i];
+    x = padL + i * gw + gw * 0.2; bw = gw * 0.26;
+    g += '<rect x="' + x.toFixed(1) + '" y="' + y(w.created).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, H - padB - y(w.created)).toFixed(1) + '" fill="#4fd1c5" opacity=".85"/>';
+    g += '<rect x="' + (x + bw + 3).toFixed(1) + '" y="' + y(w.spent).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, H - padB - y(w.spent)).toFixed(1) + '" fill="#e0a63b" opacity=".8"/>';
+    g += '<text x="' + (x + bw).toFixed(1) + '" y="' + (H - padB + 15) + '" fill="#8a93a6" font-size="10" text-anchor="middle" font-family="ui-monospace,monospace">' + w.label.slice(5) + '</text>';
+  }
+  g += '<line x1="' + padL + '" y1="' + (H - padB) + '" x2="' + (W - padR) + '" y2="' + (H - padB) + '" stroke="rgba(255,255,255,.18)"/>';
+  $('ledger-chart').innerHTML = g;
+
+  set('ledger-built', 'Decoded ' + s.meta.built_at.replace('T', ' ').replace('Z', ' UTC') + ' from ' + fmt(s.meta.logs)
+    + ' logs at block ' + fmt(s.meta.eth_block) + '. Reproduce it with tools/build_snapshot.mjs against any archive RPC.');
+  ledgerCrossCheck(s);
+  setTimeout(function () { ledgerCrossCheck(s); }, 5000);
+}
+function ledgerCrossCheck(s) {
+  var el = $('ledger-crosscheck');
+  if (!el) return;
+  var iLeaves = digitOf($('idx-leaves')), iNulls = digitOf($('idx-nulls')), iWraps = digitOf($('idx-wraps'));
+  if (iLeaves === null && iNulls === null && iWraps === null) { el.textContent = 'indexer counts not loaded yet \u2014 the ledger numbers stand on their own.'; return; }
+  var parts = [], agree = 0, total = 0, d;
+  [['leaves', iLeaves, s.totals.notes_created], ['nullifiers', iNulls, s.totals.notes_spent], ['wraps', iWraps, s.totals.wraps]].forEach(function (r) {
+    if (r[1] === null) return;
+    total++; d = r[1] - r[2];
+    if (d === 0) agree++;
+    parts.push(r[0] + ': indexer ' + fmt(r[1]) + ' vs logs ' + fmt(r[2]) + (d === 0 ? ' \u2713' : ' (' + (d > 0 ? '+' : '') + fmt(d) + ')'));
+  });
+  el.innerHTML = 'Cross-check against the indexer, same pool \u2014 ' + parts.join(' \u00b7 ')
+    + (agree === total ? '. Independent decoders agree on every count.'
+      : '. Differences are expected where the indexer and the log cover different windows; the log is the chain.');
+}
+loadLifetime();

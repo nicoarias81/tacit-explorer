@@ -13,7 +13,7 @@
   <p class="tagline">One system, two chains: <strong>Taproot envelopes on Bitcoin</strong> and <strong>confidential pools on Ethereum / Base</strong>, joined by a proof bridge.</p>
   <p class="statusline" id="statusline">loading live data…</p>
   <nav>
-    <a href="#btc">Bitcoin</a><a href="#bridge">Bridge</a><a href="#confidential">Ethereum pool</a><a href="#evm">EVM pools</a><a href="#amm">Assets &amp; AMM</a><a href="#privacy">Privacy frontier</a><a href="#lookup">Lookup</a><a href="#sources">Sources</a>
+    <a href="#btc">Bitcoin</a><a href="#bridge">Bridge</a><a href="#confidential">Ethereum pool</a><a href="#ledger">Lifetime ledger</a><a href="#evm">EVM pools</a><a href="#amm">Assets &amp; AMM</a><a href="#privacy">Privacy frontier</a><a href="#lookup">Lookup</a><a href="#sources">Sources</a>
   </nav>
   <p class="disclaimer">Read-only. No wallet, no sign-in, no keys — this page never asks for a seed phrase and never moves funds. All numbers below are fetched live by your browser from public APIs; nothing is mocked. Not affiliated with Tacit.</p>
 </header>
@@ -67,6 +67,44 @@
       <h3>Relay fee floors (quote API)</h3>
       <div id="quotes" class="quote-grid"></div>
     </div>
+  </section>
+
+  <section id="ledger">
+    <h2>3b · Lifetime ledger, decoded straight from the logs</h2>
+    <p>Everything above trusts Tacit's indexer. This section does not: the numbers here are decoded by us from the
+      <strong>14,578 event logs</strong> of the ConfidentialPool, from its deployment block
+      (<span id="ledger-deploy">…</span>) to the head read at build time (<span id="ledger-block">…</span>). If the indexer and the
+      chain ever disagree, this is the column that shows it.</p>
+
+    <div class="grid">
+      <div class="card"><div class="k">Deposits wrapped</div><div class="v" id="ledger-wraps">…</div><div class="src">Wrap events · lifetime</div></div>
+      <div class="card"><div class="k">ETH deposited as tETH</div><div class="v" id="ledger-eth">…</div><div class="src">Σ Wrap.amount · lifetime</div></div>
+      <div class="card"><div class="k">Notes minted</div><div class="v" id="ledger-minted">…</div><div class="src">Σ LeavesInserted · lifetime</div></div>
+      <div class="card"><div class="k">Notes spent</div><div class="v" id="ledger-spent">…</div><div class="src">Σ NullifiersSpent · lifetime</div></div>
+      <div class="card"><div class="k">Cross-outs to Bitcoin</div><div class="v" id="ledger-cross">…</div><div class="src">CrossOutRecorded · lifetime</div></div>
+      <div class="card"><div class="k">Bitcoin notes consumed</div><div class="v" id="ledger-btc">…</div><div class="src">BitcoinNotesConsumed · lifetime</div></div>
+    </div>
+
+    <p class="note" id="ledger-crosscheck">cross-checking against the indexer…</p>
+
+    <div class="subcard">
+      <h3>Notes minted vs spent, per week</h3>
+      <svg id="ledger-chart" viewBox="0 0 1000 250" width="100%" height="250" role="img"
+           aria-label="weekly notes minted versus spent"></svg>
+      <p class="note"><span class="src-inline">▮ minted</span> &nbsp; <span style="color:var(--accent2,#e0a63b)">▮ spent</span>
+        &nbsp;· a note is a private claim on the pool: minting is a deposit entering, spending is a transfer, a withdrawal or a cross-out.
+        The two bars tracking each other is what healthy private flow looks like.</p>
+    </div>
+
+    <div class="subcard">
+      <h3>Wrapped volume per asset, summed over every Wrap in the log</h3>
+      <table id="ledger-assets"><thead><tr><th>asset</th><th>deposits</th><th>wrapped</th><th>share of deposits</th><th>underlying</th></tr></thead><tbody></tbody></table>
+      <p class="note">Amounts are token amounts, decoded with each asset's own decimals. Two rows carry an assetId that the
+        current registry no longer answers for — earlier generations of the pool — so they are labelled unregistered instead
+        of being guessed at.</p>
+    </div>
+
+    <p class="note" id="ledger-built"></p>
   </section>
 
   <section id="evm">

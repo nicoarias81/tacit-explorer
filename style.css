@@ -49,3 +49,6 @@ td { border-bottom: 1px solid #21262d; padding: 6px 8px; vertical-align: top; }
 .footer { margin-top: 24px; color: var(--dim); font-size: 13px; border-top: 1px solid var(--line); padding-top: 12px; }
 .src-inline { color: var(--accent); }
 #statusline.progress { color: var(--accent); }
+
+.lbar { display:inline-block; width:120px; height:8px; background:rgba(255,255,255,.10); border-radius:4px; vertical-align:middle; overflow:hidden; }
+.lbar i { display:block; height:100%; background:var(--accent,#4fd1c5); }

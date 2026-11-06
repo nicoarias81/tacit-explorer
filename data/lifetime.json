@@ -1,0 +1,162 @@
+{
+ "meta": {
+  "built_at": "2026-11-06T09:31:09.448Z",
+  "eth_block": 26354927,
+  "deploy_block": 25998751,
+  "logs": 14578,
+  "pool": "0x000000000Ed1eabD231Be41d93b719056F7febFC",
+  "relay": "0x20A6ddc2C6E620c6248B5A34E85996516FDd19D0"
+ },
+ "totals": {
+  "wraps": 3555,
+  "notes_created": 5823,
+  "notes_spent": 5988,
+  "locks": 29,
+  "cdp": 31,
+  "crossouts": 19,
+  "btc_notes": 2,
+  "btc_roots": 2
+ },
+ "assets": [
+  {
+   "assetId": "0xf0bbe868af10c6c67652a99709bf32048d1aa7194efe3e9a1ef1bde43f94762b",
+   "symbol": "TAC",
+   "name": "TAC",
+   "decimals": 18,
+   "underlying": "0xa1313eb9f3a445606d9583bcac3ebeb56a858279",
+   "wraps": 91,
+   "volume_raw": "116754272588360000000000",
+   "volume": 116754.27258836
+  },
+  {
+   "assetId": "0x3cba71e1114af183cdeacc6b8457a474d17529fd28704480ca799d0d03126f34",
+   "symbol": "tETH",
+   "name": "Tacit ETH",
+   "decimals": 18,
+   "underlying": "0x0000000000000000000000000000000000000000",
+   "wraps": 3441,
+   "volume_raw": "8103101506000000000000",
+   "volume": 8103.101506
+  },
+  {
+   "assetId": "0x8f4490dd3728b0ee904d7a67c11b37ffd463a5c7f08b79810006995ee8a9679d",
+   "symbol": "tacUSD",
+   "name": "Tacit USD",
+   "decimals": 18,
+   "underlying": "0x23cacffac2674514a6d4f6cd420b4cc2ac921564",
+   "wraps": 1,
+   "volume_raw": "96756200000000000000",
+   "volume": 96.7562
+  },
+  {
+   "assetId": "0xc50e8dd9666f64a23e5457d686382901f08aaea3554328fc4ac25d2f9fac6c00",
+   "symbol": "",
+   "name": "",
+   "decimals": 6,
+   "underlying": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+   "wraps": 14,
+   "volume_raw": "68630000",
+   "volume": 68.63
+  },
+  {
+   "assetId": "0x45addc633189749428e8fc36ea4ca067fcb4b0c7abc186a095360db10dbe0b48",
+   "symbol": "",
+   "name": "",
+   "decimals": 8,
+   "underlying": "0xe0f63a424a4439cbe457d80e4f4b51ad25b2c56c",
+   "wraps": 4,
+   "volume_raw": "400000000",
+   "volume": 4
+  },
+  {
+   "assetId": "0xc05bfed4c4eb61d2b39b643f841b78964ec96715a5795853b94be0dbc569c1d6",
+   "symbol": "USDC",
+   "name": "USD Coin",
+   "decimals": 6,
+   "underlying": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+   "wraps": 2,
+   "volume_raw": "2000000",
+   "volume": 2
+  },
+  {
+   "assetId": "0x62a20d98fc1cd20289621d1315294cb8772f934d822e404b71e1f471cf0679c8",
+   "symbol": "tacBTC",
+   "name": "Tacit Bitcoin",
+   "decimals": 18,
+   "underlying": "0xdf1d99148beb7a9aff1d95c49b3d22b7ed90d696",
+   "wraps": 1,
+   "volume_raw": "1322770000000000",
+   "volume": 0.00132277
+  },
+  {
+   "assetId": "0xb649504659bb1ec4d8680cfae2e9d14b7bc151f8ba75d983e3323d8015dccd06",
+   "symbol": "wstETH",
+   "name": "Wrapped liquid staked Ether 2.0",
+   "decimals": 18,
+   "underlying": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+   "wraps": 1,
+   "volume_raw": "400000000000000",
+   "volume": 0.0004
+  }
+ ],
+ "weeks": [
+  {
+   "label": "2026-09-17",
+   "created": 115,
+   "spent": 93
+  },
+  {
+   "label": "2026-09-23",
+   "created": 78,
+   "spent": 44
+  },
+  {
+   "label": "2026-09-30",
+   "created": 498,
+   "spent": 445
+  },
+  {
+   "label": "2026-10-06",
+   "created": 379,
+   "spent": 346
+  },
+  {
+   "label": "2026-10-12",
+   "created": 1295,
+   "spent": 1260
+  },
+  {
+   "label": "2026-10-18",
+   "created": 1836,
+   "spent": 2078
+  },
+  {
+   "label": "2026-10-24",
+   "created": 860,
+   "spent": 951
+  },
+  {
+   "label": "2026-10-31",
+   "created": 762,
+   "spent": 771
+  }
+ ],
+ "cross": [
+  {
+   "key": ":1",
+   "n": 8
+  },
+  {
+   "key": "tETH:1",
+   "n": 6
+  },
+  {
+   "key": "TAC:1",
+   "n": 4
+  },
+  {
+   "key": "tacBTC:1",
+   "n": 1
+  }
+ ]
+}
